@@ -4,7 +4,6 @@
 #       Create a dictionary and populate it with other dictionaries based on the data in the dat file 
 #       Use this data to add to the graph
 
-import matplotlib as mpl
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -13,91 +12,86 @@ horizontal = 1
 vertical = 1
 
 #initialize the dictionary for storing parameters given in the dat file 
-initialData = {}
-initialData['photon'] = {}
-initialData['horizontal'] = {}
-initialData['vertical'] = {}
+initial_data = {'photon': {}, 'horizontal': {}, 'vertical': {}}
 matrix = [[]] 
 
 """ 
 Get data from the dat file with the parameters for the scan. Put this data into an organized Dictionary
-
 """
-def getCommentedData():
+def get_parameters():
     with open('res_int_pr_se.dat') as file:
-        lineNum = 1
+        line_num = 1
         for line in file:
             if "#" not in line:
                 return
             else:
-                if (lineNum is 1):
-                    populateDictionary(line, '[', ']', 'intensity')
-                elif ('Initial Photon' in line):
-                    populateDictionary(line, '#', ' ', 'photon', 'Initial_Energy')
-                elif ('Final Photon' in line):
-                    populateDictionary(line, '#', ' ', 'photon', 'Final_Energy')
-                elif ('Initial Horizontal' in line):
-                    populateDictionary(line, '#', ' ', 'horizontal', 'Initial_Position')
-                elif ('Final Horizontal' in line):
-                    populateDictionary(line, '#', ' ', 'horizontal', 'Final_Position')
-                elif ('vs Horizontal' in line):
-                    populateDictionary(line, '#', ' ', 'horizontal', 'Points', 'float','horizontal')
-                elif ('Initial Vertical' in line):
-                    populateDictionary(line, '#', ' ', 'vertical', 'Initial_Position')
-                elif ('Final Vertical' in line):
-                    populateDictionary(line, '#', ' ', 'vertical', 'Final_Position')
-                elif ('vs Vertical' in line):
-                    populateDictionary(line, '#', ' ', 'vertical', 'Points', 'float','vertical')
+                if line_num == 1:
+                    populate_dictionary(line, '[', ']', 'intensity')
+                elif 'Initial Photon' in line:
+                    populate_dictionary(line, '#', ' ', 'photon', 'Initial_Energy')
+                elif 'Final Photon' in line:
+                    populate_dictionary(line, '#', ' ', 'photon', 'Final_Energy')
+                elif 'Initial Horizontal' in line:
+                    populate_dictionary(line, '#', ' ', 'horizontal', 'Initial_Position')
+                elif 'Final Horizontal' in line:
+                    populate_dictionary(line, '#', ' ', 'horizontal', 'Final_Position')
+                elif 'vs Horizontal' in line:
+                    populate_dictionary(line, '#', ' ', 'horizontal', 'Points', 'float','horizontal')
+                elif 'Initial Vertical' in line:
+                    populate_dictionary(line, '#', ' ', 'vertical', 'Initial_Position')
+                elif 'Final Vertical' in line:
+                    populate_dictionary(line, '#', ' ', 'vertical', 'Final_Position')
+                elif 'vs Vertical' in line:
+                    populate_dictionary(line, '#', ' ', 'vertical', 'Points', 'float','vertical')
 
-
-            lineNum += 1
+            line_num += 1
 
 """
 Funciton that populates the dictionary based on what values from the line are needed, what type they should be, and if they need to change 
 the values of any global varaiables 
-
 """
 
-def populateDictionary(line, startingPoint, endingPoint, d, d1 = {}, type1='string', vToChange = 0):
-    changeH = False
-    changeV = False
+def populate_dictionary(line, starting_point, ending_point, d, d1=None, type1='string', v_to_change=0):
+    change_h = False
+    change_v = False
 
-    if (vToChange is 'horizontal'):
-        changeH = True
-    elif (vToChange is 'vertical'):
-        changeV = True
+    if v_to_change is 'horizontal':
+        change_h = True
+    elif v_to_change is 'vertical':
+        change_v = True
 
-    start = line.find(startingPoint) + 1
-    end = line.find(endingPoint)
+    start = line.find(starting_point) + 1
+    end = line.find(ending_point)
 
-    if (type1 is 'string'):
-        vToChange = (line[start:end])
+    if type1 is 'string':
+        v_to_change = (line[start:end])
     else:
-        vToChange = int(line[start:end])
-
+        v_to_change = int(line[start:end])
 
     #Checks to see if d1 is actually necessary 
-    if (not d1):
-        initialData[d] = vToChange
+    if not d1:
+        initial_data[d] = v_to_change
     else:
-        initialData[d][d1] = vToChange
+        initial_data[d][d1] = v_to_change
 
     #Checks to see if horizontal / vertical global values should be changed 
-    if (changeH):
-        setHorizontal(vToChange)
-    elif (changeV):
-        setVertical(vToChange)
+    if change_h:
+        setHorizontal(v_to_change)
+    elif change_v:
+        setVertical(v_to_change)
+
 
 def setHorizontal(value):
     global horizontal
     horizontal = value
+
 
 def setVertical(value):
     global vertical
     vertical = value
 
 
-def populateMatrix():
+def populate_matrix():
     global matrix
     matrix = [[0 for i in range(horizontal)] for j in range(vertical)] 
     with open('res_int_pr_se.dat') as file:
@@ -111,13 +105,15 @@ def populateMatrix():
                     h = 0
                     v += 1
 
-def populateMatrixSmart():
+
+def populate_matrix_smart():
     d = np.loadtxt('res_int_pr_se.dat')
     d2 = d.reshape((294, 528))
     global matrix
     matrix = d2
 
-def createImage(): 
+
+def create_image(): 
    im = plt.imshow(matrix, cmap='gray', aspect="equal")
    plt.colorbar(im, orientation='vertical')
    plt.show()
@@ -125,12 +121,11 @@ def createImage():
 
 # np.loadtxt()
 # import pandas
-
 if __name__ == '__main__':
-    getCommentedData()
+    get_parameters()
 
     #populateMatrixSmart()
 
-    populateMatrix()
-    print(initialData)
-    createImage() 
+    populate_matrix()
+    print(initial_data)
+    create_image() 
