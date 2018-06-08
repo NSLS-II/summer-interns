@@ -27,21 +27,21 @@ def get_parameters(d):
             if '/' in line:
                 populate_dictionary(line, d_to_populate = d, starting_point='[', ending_point=']', d='intensity', type1='string')
             elif 'Initial Photon' in line:
-                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='photon', d1='Initial_Energy')
+                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='photon', d1='initial_energy')
             elif 'Final Photon' in line:
-                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='photon', d1='Final_Energy')
+                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='photon', d1='final_energy')
             elif 'Initial Horizontal' in line:
-                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='horizontal', d1='Initial_Position')
+                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='horizontal', d1='initial_position')
             elif 'Final Horizontal' in line:
-                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='horizontal', d1='Final_Position')
+                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='horizontal', d1='final_position')
             elif 'vs Horizontal' in line:
-                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='horizontal', d1='Points', type1='int')
+                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='horizontal', d1='points', type1='int')
             elif 'Initial Vertical' in line:
-                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='vertical', d1='Initial_Position')
+                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='vertical', d1='initial_position')
             elif 'Final Vertical' in line:
-                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='vertical', d1='Final_Position')
+                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='vertical', d1='final_position')
             elif 'vs Vertical' in line:
-                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='vertical', d1='Points', type1='int')
+                populate_dictionary(line, d_to_populate = d, starting_point='#', ending_point=' ', d='vertical', d1='points', type1='int')
 
 
 def populate_dictionary(line, d_to_populate, starting_point, ending_point, d, d1=None, type1='float'):
@@ -140,7 +140,7 @@ def populate_matrix_smart(matrix, horizontal, vertical):
     return matrix
 
 
-def create_image(matrix): 
+def create_image(matrix, initial_data):
     """
     Creates 2D image based on data points in matrix
     Parameters
@@ -152,8 +152,17 @@ def create_image(matrix):
     -----
     
     """
-    im = plt.imshow(matrix, cmap='gray', aspect='equal')
-    plt.colorbar(im, orientation='vertical')
+    plt.figure(1)
+    plt.subplot(211)
+    im = plt.imshow(matrix, aspect=2,
+                    extent=(
+                        initial_data['horizontal']['initial_position']*1e6, initial_data['horizontal']['final_position']*1e6,
+                        initial_data['vertical']['initial_position']*1e6, initial_data['vertical']['final_position']*1e6
+                    ))
+    # plt.colorbar(im, orientation='vertical')
+    plt.xlabel('Horizontal Position [µm]')
+    plt.ylabel('Vertical Position [µm]')
+    plt.title(f'Photon energy: {initial_data["photon"]["final_energy"]} eV')
     plt.show()
 
 
@@ -162,10 +171,10 @@ if __name__ == '__main__':
     matrix = [[]] 
 
     get_parameters(initial_data)
-    horizontal = initial_data['horizontal']['Points']
-    vertical = initial_data['vertical']['Points']
+    horizontal = initial_data['horizontal']['points']
+    vertical = initial_data['vertical']['points']
 
     #matrix = populate_matrix_smart(matrix, horizontal, vertical)
     matrix = populate_matrix(matrix, horizontal, vertical)
     print(initial_data)
-    create_image(matrix) 
+    create_image(matrix, initial_data)
