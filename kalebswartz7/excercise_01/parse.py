@@ -186,8 +186,8 @@ def _display(matrix, initial_data):
                                     ['initial_position'], 'micro')
     vertical_final = _unit_change(initial_data['vertical']
                                   ['final_position'], 'micro')
-    initial_array_horiz = 264
-    initial_array_vert = 147
+    initial_array_horiz = 0
+    initial_array_vert = 0
 
     # Subplot 1:
     ax1.imshow(matrix, aspect = 1.5,
