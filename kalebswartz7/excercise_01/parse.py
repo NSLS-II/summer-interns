@@ -173,6 +173,7 @@ def _display(matrix, initial_data):
         contains paramter data from Dat file
     
     """
+    matrix = np.array(matrix)
     fig = _create_figure()
     ax1 = fig.get_axes()[0]
     ax2 = fig.get_axes()[1]
@@ -190,10 +191,8 @@ def _display(matrix, initial_data):
     initial_array_vert = 0
 
     # Subplot 1:
-    ax1.imshow(matrix, aspect = 1.5,
-                    extent=(
-                         horizontal_initial, horizontal_final,
-                         vertical_initial, vertical_final), cmap='gray'
+    img = ax1.imshow(matrix, aspect = 1.5,
+                    cmap='gray'
                     )
     ax1.set_xticks([])
     ax1.set_yticks([])
@@ -201,14 +200,20 @@ def _display(matrix, initial_data):
                   f' {initial_data["photon"]["units"]})', weight='extra bold')
     line_v = ax1.axvline(lw='1')
     line_h = ax1.axhline(lw='1')
+    ax1.set_aspect('auto')
 
     #Subplot 2:
-    _create_horizontal_slice(ax2, initial_array_horiz)
+    _create_horizontal_slice(ax2, initial_array_horiz, matrix)
 
     #Subplot 3:
-    _create_vertical_slice(ax3, initial_array_vert)
+    _create_vertical_slice(ax3, initial_array_vert, matrix)
+
+    #Create Colorbar:
+    ax4 = plt.axes([0.03, 0.4, 0.05, 0.45])
+    plt.colorbar(img, cax=ax4)
 
     mouse = create_mouse(fig, line_h, line_v, initial_array_horiz)
+
     plt.show()
 
 def _create_figure():
@@ -218,11 +223,11 @@ def _create_figure():
     """
     fig = plt.figure(1, figsize=(8, 6))
     ax1 = plt.subplot2grid((3, 3), (0, 0), colspan=2, rowspan=2)
-    ax2 = plt.subplot2grid((3, 3), (2, 0), colspan=2)
+    ax2 = plt.subplot2grid((3, 3), (2, 0), colspan=2, sharex=ax1)
     ax3 = plt.subplot2grid((3, 3), (0, 2), rowspan=2)
     return fig
 
-def _create_horizontal_slice(axis, array_number):
+def _create_horizontal_slice(axis, array_number, matrix):
     """
     Creates horizontal slice of 2D image
 
@@ -234,12 +239,15 @@ def _create_horizontal_slice(axis, array_number):
         location in 2D array for horizontal slice to occur
 
     """
-    axis.plot(matrix[array_number])
-    axis.set_aspect('auto')
+    matrix = np.array(matrix)
+    values = matrix[array_number, :]
+    axis.plot(values)
+    print(array_number)
     axis.set_xlabel('Horizontal Position [µm]', weight='semibold')
     _draw_lines(axis, 'x')
 
-def _create_vertical_slice(axis, array_number):
+
+def _create_vertical_slice(axis, array_number, matrix):
     """
         Creates vertical slice of 2D image
 
@@ -251,11 +259,9 @@ def _create_vertical_slice(axis, array_number):
             location in 2D array for vertical slice to occur
 
         """
-    vertical = []
-    for i in matrix:
-        vertical.append(i[array_number])
-
-    init_pos = plt.gca().transData
+    matrix = np.array(matrix)
+    vertical = matrix[:, array_number]
+    init_pos = axis.transData
     new_pos = tf.Affine2D().rotate_deg(90)
     axis.plot(vertical, transform=new_pos + init_pos)
 
@@ -266,7 +272,6 @@ def _create_vertical_slice(axis, array_number):
     axis.set_ylabel('Vertical Position [µm]', weight='semibold')
     axis.yaxis.set_label_position('right')
     _draw_lines(axis, 'y')
-
 
 
 class create_mouse:
@@ -309,10 +314,10 @@ class create_mouse:
                 self.vertical_line.set_xdata(event.xdata)
                 self.figure.get_axes()[1].clear()
                 _create_horizontal_slice(self.figure.get_axes()[1],
-                                         int(event.xdata))
+                                         event.x, matrix=matrix)
                 self.figure.get_axes()[2].clear()
                 _create_vertical_slice(self.figure.get_axes()[2],
-                                         int(event.ydata))
+                                         event.y, matrix=matrix)
             self.figure.canvas.draw()
 
 
