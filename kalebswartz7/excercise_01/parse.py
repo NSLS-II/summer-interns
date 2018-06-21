@@ -8,7 +8,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import matplotlib.transforms as tf
+from xray_vision.backend.mpl.cross_section_2d import CrossSection
 from matplotlib import gridspec
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+
 
 
 def get_parameters(d):
@@ -111,34 +114,6 @@ def populate_dictionary(line, d_to_populate, starting_point,
         d_to_populate[d][d1] = substring_value
 
 
-def populate_matrix(matrix, horizontal, vertical):
-    """
-    Reads in all non-commented data from file, parses into 2D array
-    based on Horizontal and Vertical Points
-
-    Parameters
-    ----------
-    matrix : 2D array 
-        array that will be populated by the data parsed in the input file
-    horizontal : int 
-        # of horizontal rows in matrix
-    vertical : int
-        # of vertical rows in matrix
-    
-    """
-    matrix = [[0 for i in range(horizontal)] for j in range(vertical)] 
-    with open('res_int_pr_se.dat') as file:
-        h, v = 0, 0
-        for line in file:
-            if '#' not in line:
-                matrix[v][h] = float(line)
-                if (h < horizontal - 1):
-                    h += 1
-                else:
-                    h = 0
-                    v += 1
-    return matrix
-
 
 def populate_matrix_smart(matrix, horizontal, vertical):
     """
@@ -191,28 +166,28 @@ def _display(matrix, initial_data):
     initial_array_vert = 0
 
     # Subplot 1:
-    img = ax1.imshow(matrix, aspect = 1.5,
-                    cmap='gray'
+    img = ax1.imshow(matrix, aspect = 1.5, extent=[horizontal_initial, horizontal_final,
+                     vertical_initial, vertical_final]
                     )
-    ax1.set_xticks([])
-    ax1.set_yticks([])
     ax1.set_title(f'After Propagation (E= {initial_data["photon"]["final_energy"]}'
                   f' {initial_data["photon"]["units"]})', weight='extra bold')
     line_v = ax1.axvline(lw='1')
     line_h = ax1.axhline(lw='1')
-    ax1.set_aspect('auto')
+    plt.setp(ax1.get_xticklabels(), visible=False)
+    plt.setp(ax1.get_yticklabels(), visible=False)
 
     #Subplot 2:
-    _create_horizontal_slice(ax2, initial_array_horiz, matrix)
+    _create_horizontal_slice(ax2, initial_array_horiz, matrix, horizontal_initial, horizontal_final)
 
     #Subplot 3:
-    _create_vertical_slice(ax3, initial_array_vert, matrix)
+    _create_vertical_slice(ax3, initial_array_vert, matrix, vertical_initial, vertical_final)
 
     #Create Colorbar:
     ax4 = plt.axes([0.03, 0.4, 0.05, 0.45])
     plt.colorbar(img, cax=ax4)
 
-    mouse = create_mouse(fig, line_h, line_v, initial_array_horiz)
+    mouse = create_mouse(fig, line_h, line_v, initial_array_horiz,
+                         horizontal_initial, horizontal_final, vertical_initial, vertical_final)
 
     plt.show()
 
@@ -224,10 +199,10 @@ def _create_figure():
     fig = plt.figure(1, figsize=(8, 6))
     ax1 = plt.subplot2grid((3, 3), (0, 0), colspan=2, rowspan=2)
     ax2 = plt.subplot2grid((3, 3), (2, 0), colspan=2, sharex=ax1)
-    ax3 = plt.subplot2grid((3, 3), (0, 2), rowspan=2)
+    ax3 = plt.subplot2grid((3, 3), (0, 2), rowspan=2, sharey=ax1)
     return fig
 
-def _create_horizontal_slice(axis, array_number, matrix):
+def _create_horizontal_slice(axis, array_number, matrix, horizontal_initial, horizontal_final):
     """
     Creates horizontal slice of 2D image
 
@@ -241,13 +216,40 @@ def _create_horizontal_slice(axis, array_number, matrix):
     """
     matrix = np.array(matrix)
     values = matrix[array_number, :]
-    axis.plot(values)
-    print(array_number)
+    plot = axis.plot(np.linspace(horizontal_initial, horizontal_final, len(np.array(values))), values)
+    axis.set_xlim([horizontal_initial, horizontal_final])
     axis.set_xlabel('Horizontal Position [µm]', weight='semibold')
     _draw_lines(axis, 'x')
 
+def _update_horizontal_axis(axis, array_number, matrix, horizontal_initial, horizontal_final):
+    matrix = np.array(matrix)
+    values = matrix[array_number, :]
+    plot = axis.plot(np.linspace(array_number - 50, array_number + 50,
+                                 len(np.array(values))), values)
+    axis.set_xlim([horizontal_initial, horizontal_final])
+    axis.set_xlabel('Horizontal Position [µm]', weight='semibold')
+    _draw_lines(axis, 'x')
 
-def _create_vertical_slice(axis, array_number, matrix):
+def _update_vertical_axis(axis, array_number, matrix, vertical_initial, vertical_final):
+    matrix = np.array(matrix)
+    values = matrix[:, array_number]
+    init_pos = axis.transData
+    new_pos = tf.Affine2D().rotate_deg(90)
+    axis.plot(
+        np.linspace(array_number - 50, array_number + 50, len(np.array(values))),
+        values, transform=new_pos + init_pos)
+    axis.set_ylim([vertical_initial, vertical_final])
+
+    axis.get_yaxis().set_ticks_position(position='right')
+    axis.get_xaxis().set_ticks_position(position='bottom')
+    axis.set_xlabel(f'Intensity [{initial_data["intensity"]}]',
+                    weight='semibold', labelpad=20)
+    axis.set_ylabel('Vertical Position [µm]', weight='semibold')
+    axis.yaxis.set_label_position('right')
+    _draw_lines(axis, 'y')
+
+
+def _create_vertical_slice(axis, array_number, matrix, vertical_initial, vertical_final):
     """
         Creates vertical slice of 2D image
 
@@ -260,10 +262,11 @@ def _create_vertical_slice(axis, array_number, matrix):
 
         """
     matrix = np.array(matrix)
-    vertical = matrix[:, array_number]
+    values = matrix[:, array_number]
     init_pos = axis.transData
     new_pos = tf.Affine2D().rotate_deg(90)
-    axis.plot(vertical, transform=new_pos + init_pos)
+    axis.plot(np.linspace(vertical_initial, vertical_final, len(np.array(values))), values, transform=new_pos + init_pos)
+    axis.set_ylim([vertical_initial, vertical_final])
 
     axis.get_yaxis().set_ticks_position(position='right')
     axis.get_xaxis().set_ticks_position(position='bottom')
@@ -275,7 +278,8 @@ def _create_vertical_slice(axis, array_number, matrix):
 
 
 class create_mouse:
-    def __init__(self, figure, horizontal_line, vertical_line, horiz_array):
+    def __init__(self, figure, horizontal_line, vertical_line, horiz_array,
+                 horizontal_initial, horizontal_final, vertical_initial, vertical_final):
         """
         Initialize mouse click class
 
@@ -293,6 +297,10 @@ class create_mouse:
         self.horizontal_line = horizontal_line
         self.vertical_line = vertical_line
         self.horiz_array = horiz_array
+        self.horizontal_initial = horizontal_initial
+        self.horizontal_final = horizontal_final
+        self.vertical_initial = vertical_initial
+        self.vertical_final = vertical_final
         self.cid = figure.canvas.mpl_connect('button_press_event', self)
 
     def __call__(self, event):
@@ -313,11 +321,16 @@ class create_mouse:
                 self.horizontal_line.set_ydata(event.ydata)
                 self.vertical_line.set_xdata(event.xdata)
                 self.figure.get_axes()[1].clear()
-                _create_horizontal_slice(self.figure.get_axes()[1],
-                                         event.x, matrix=matrix)
+                _update_horizontal_axis(self.figure.get_axes()[1],
+                                         int(event.xdata),
+                                         matrix=matrix,
+                                        horizontal_initial=self.horizontal_initial,
+                                        horizontal_final=self.horizontal_final)
                 self.figure.get_axes()[2].clear()
-                _create_vertical_slice(self.figure.get_axes()[2],
-                                         event.y, matrix=matrix)
+                _update_vertical_axis(self.figure.get_axes()[2],
+                                         int(event.ydata), matrix=matrix,
+                                       vertical_initial=self.vertical_initial,
+                                       vertical_final=self.vertical_final)
             self.figure.canvas.draw()
 
 
@@ -367,6 +380,5 @@ if __name__ == '__main__':
     vertical = initial_data['vertical']['points']
 
     matrix = populate_matrix_smart(matrix, horizontal, vertical)
-    matrix = populate_matrix(matrix, horizontal, vertical)
     print(initial_data)
     _display(matrix, initial_data)
